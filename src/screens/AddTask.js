@@ -20,6 +20,18 @@ export default class extends Component {
     ...initialState,
   };
 
+  save = () => {
+    const newTask = {
+      desc: this.state.desc,
+      date: this.state.date,
+    }
+
+    if (this.props.onSave) {
+      this.props.onSave(newTask);
+    }
+    this.setState({ ...initialState });
+  }
+
   getDateTimePicker = () => {
     let datePicker = (
       <DateTimePicker
@@ -75,7 +87,7 @@ render() {
               </TouchableWithoutFeedback>
             </TouchableOpacity>
             <TouchableOpacity>
-              <TouchableWithoutFeedback onPress={this.props.onSave}>
+              <TouchableWithoutFeedback onPress={this.save}>
                 <Text style={styles.button}>Salvar</Text>
               </TouchableWithoutFeedback>
             </TouchableOpacity>

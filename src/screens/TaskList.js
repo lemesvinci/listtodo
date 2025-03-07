@@ -6,7 +6,9 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  Alert,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Icon from "react-native-vector-icons/FontAwesome";
 import todayImage from "../../assets/imgs/today.jpg";
 import commonStyles from "../commonStyles";
@@ -15,56 +17,78 @@ import "moment/locale/pt-br";
 import Task from "../components/Task";
 import AddTask from "./AddTask";
 
+const initialState = {
+  showDoneTasks: true,
+  showAddTask: false,
+  visibleTasks: [],
+  tasks: [],
+};
+
 export default class TaskList extends Component {
-  state = {
-    showDoneTasks: true,
-    showAddTask: true,
-    visibleTasks: [],
-    tasks: [
-      {
-        id: Math.random(),
-        desc: "Comprar Livro de React Native",
-        estimateAt: new Date(),
-        doneAt: new Date(),
-      },
-      {
-        id: Math.random(),
-        desc: "Ler Livro de React Native",
-        estimateAt: new Date(),
-        doneAt: null,
-      },
-    ],
+  state = { ...initialState };
+
+  componentDidMount = async () => {
+    try {
+      const stateString = await AsyncStorage.getItem("tasks");
+      const tasks = JSON.parse(stateString) || [];
+      this.setState({ tasks }, this.filterTasks);
+    } catch (error) {
+      console.log("Erro ao carregar tarefas:", error);
+    }
   };
 
-  componentDidMount = () => {
-    this.filterTasks();
+  saveTasks = async () => {
+    try {
+      await AsyncStorage.setItem("tasks", JSON.stringify(this.state.tasks));
+    } catch (error) {
+      console.log("Erro ao salvar tarefas:", error);
+    }
   };
 
   toggleFilter = () => {
     this.setState(
-      { showDoneTasks: !this.state.showDoneTasks },
+      (prevState) => ({ showDoneTasks: !prevState.showDoneTasks }),
       this.filterTasks
     );
   };
 
   toggleTask = (taskId) => {
-    const tasks = [...this.state.tasks];
-    tasks.forEach((task) => {
-      if (task.id === taskId) {
-        task.doneAt = task.doneAt ? null : new Date();
-      }
+    const tasks = this.state.tasks.map((task) =>
+      task.id === taskId ? { ...task, doneAt: task.doneAt ? null : new Date() } : task
+    );
+    this.setState({ tasks }, () => {
+      this.filterTasks();
+      this.saveTasks();
     });
-    this.setState({ tasks }, this.filterTasks);
+  };
+
+  addTask = (newTask) => {
+    if (!newTask.desc || !newTask.desc.trim()) {
+      Alert.alert("Dados inválidos", "Descrição não informada!");
+      return;
+    }
+    const tasks = [
+      ...this.state.tasks,
+      { id: Math.random(), desc: newTask.desc, estimateAt: newTask.date, doneAt: null },
+    ];
+    this.setState({ tasks, showAddTask: false }, () => {
+      this.filterTasks();
+      this.saveTasks();
+    });
+  };
+
+  deleteTask = (id) => {
+    const tasks = this.state.tasks.filter((task) => task.id !== id);
+    this.setState({ tasks }, () => {
+      this.filterTasks();
+      this.saveTasks();
+    });
   };
 
   filterTasks = () => {
-    let visibleTasks = null;
-    if (this.state.showDoneTasks) {
-      visibleTasks = [...this.state.tasks];
-    } else {
-      const pending = (task) => task.doneAt === null;
-      visibleTasks = this.state.tasks.filter(pending);
-    }
+    const visibleTasks = this.state.showDoneTasks
+      ? this.state.tasks
+      : this.state.tasks.filter((task) => !task.doneAt);
     this.setState({ visibleTasks });
   };
 
@@ -75,6 +99,7 @@ export default class TaskList extends Component {
         <AddTask
           isVisible={this.state.showAddTask}
           onCancel={() => this.setState({ showAddTask: false })}
+          onSave={this.addTask}
         />
         <ImageBackground source={todayImage} style={styles.background}>
           <View style={styles.iconBar}>
@@ -96,7 +121,7 @@ export default class TaskList extends Component {
             data={this.state.visibleTasks}
             keyExtractor={(item) => `${item.id}`}
             renderItem={({ item }) => (
-              <Task {...item} toggleTask={this.toggleTask} />
+              <Task {...item} onToggleTask={this.toggleTask} onDelete={this.deleteTask} />
             )}
           />
         </View>
@@ -105,7 +130,7 @@ export default class TaskList extends Component {
           activeOpacity={0.7}
           onPress={() => this.setState({ showAddTask: true })}
         >
-          <Icon name="plus" size={20} color={commonStyles.colors.secondary} />    
+          <Icon name="plus" size={20} color={commonStyles.colors.secondary} />
         </TouchableOpacity>
       </View>
     );
@@ -147,7 +172,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   addButton: {
-    position: 'absolute',
+    position: "absolute",
     right: 30,
     bottom: 30,
     width: 55,
