@@ -1,8 +1,8 @@
 export default {
-    fontFamily: 'Lato-Black',
+    fontFamily: '../assets/fonts/Lato-Black.ttf',
     colors: {
         today: "#8c3c9c",
-        secondary: "#FFF",
+        secondary: "black",
         mainText: "#222",
         subText: "#555",
     },
