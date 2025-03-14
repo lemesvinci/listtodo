@@ -20,8 +20,8 @@ import { server, showError, showSuccess } from '../common'
 
 const initialState = {
     name: '',
-    email: '',
-    password: '',
+    email: 'glemesandrade7@gmail.com',
+    password: 'gui1234',
     confirmPassword: '',
     stageNew: false
 }
@@ -65,7 +65,7 @@ export default class Auth extends Component {
 
             AsyncStorage.setItem('userData', JSON.stringify(res.data))
             axios.defaults.headers.common['Authorization'] = `bearer ${res.data.token}`
-            //this.props.navigation.navigate('Home', res.data)
+            this.props.navigation.navigate('Home', res.data)
             this.props.navigation.dispatch(
                 CommonActions.reset({
                     index: 0,
